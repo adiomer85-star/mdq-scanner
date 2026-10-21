@@ -13,7 +13,7 @@
       font-family: Arial, sans-serif;
       text-align: center;
       margin: 0;
-      padding: 18px;
+      padding: 16px;
       background: #f7f8fb;
     }
 
@@ -31,6 +31,7 @@
       background: #2455aa;
       color: white;
       border: 0;
+      cursor: pointer;
     }
 
     button:disabled { opacity: 0.5; }
@@ -38,7 +39,6 @@
     #reader {
       width: 100%;
       max-width: 450px;
-      min-height: 100px;
       margin: 15px auto;
       background: #eeeeee;
       overflow: hidden;
@@ -49,37 +49,37 @@
       display: block !important;
       width: 100% !important;
       height: auto !important;
-      min-height: 200px;
       object-fit: cover;
     }
 
     #status {
-      font-size: 19px;
+      font-size: 18px;
       white-space: pre-wrap;
     }
 
     #result {
       display: none;
-      padding: 22px;
-      margin: 15px auto;
+      padding: 18px;
+      margin: 12px auto;
       max-width: 450px;
       border-radius: 12px;
-      font-size: 23px;
+      font-size: 21px;
       font-weight: bold;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
 
-#responseFrame {
-  display: block;
-  width: 100%;
-  max-width: 450px;
-  height: 180px;
-  border: 0;
-  margin: 12px auto;
-  background: white;
-  border-radius: 12px;
-}
+    #responseFrame {
+      display: block;
+      width: 100%;
+      max-width: 450px;
+      height: 220px;
+      box-sizing: border-box;
+      border: 2px solid #2455aa;
+      margin: 12px auto;
+      background: white;
+      border-radius: 12px;
+    }
 
     .success { background: #b8efb5; }
     .error { background: #ffcccc; }
@@ -91,7 +91,8 @@
 
   <section id="login">
     <p>הזיני קוד צוות</p>
-    <input id="pin" type="password" placeholder="קוד צוות"
+    <input id="pin" type="password"
+           placeholder="קוד צוות"
            autocomplete="current-password">
     <br>
     <button id="startButton" onclick="startScanner()">
@@ -104,17 +105,27 @@
     <div id="reader"></div>
     <div id="result"></div>
 
-    <button id="nextButton" style="display:none"
-            onclick="scanNext()">סריקת המשתתפת הבאה</button>
+    <button id="nextButton"
+            style="display:none"
+            onclick="scanNext()">
+      סריקת המשתתפת הבאה
+    </button>
 
     <button onclick="stopScanner()">יציאה</button>
   </section>
 
-  <iframe id="responseFrame" name="responseFrame"
-          title="תוצאת בדיקה"></iframe>
+  <iframe
+    id="responseFrame"
+    name="responseFrame"
+    title="תוצאת בדיקת המשתתפת">
+  </iframe>
 
-  <form id="requestForm" method="POST" target="responseFrame"
-        action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
+  <form
+    id="requestForm"
+    method="POST"
+    target="responseFrame"
+    action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
+
     <input type="hidden" name="action" value="redeem">
     <input type="hidden" name="pin" id="formPin">
     <input type="hidden" name="id" id="formId">
@@ -131,13 +142,6 @@
     document.getElementById("status").textContent = message;
   }
 
-  function showResult(message, success) {
-    const el = document.getElementById("result");
-    el.textContent = message;
-    el.className = success ? "success" : "error";
-    el.style.display = "block";
-  }
-
   async function startScanner() {
     staffPin = document.getElementById("pin").value.trim();
 
@@ -149,6 +153,7 @@
     document.getElementById("startButton").disabled = true;
     document.getElementById("login").style.display = "none";
     document.getElementById("scannerArea").style.display = "block";
+
     setStatus("פותחת מצלמה...");
 
     try {
@@ -199,9 +204,15 @@
     busy = true;
     waitingForResponse = true;
 
-    setStatus("בודקת משתתפת...");
+    setStatus("הקוד זוהה. בודקת משתתפת...");
     document.getElementById("nextButton").style.display = "none";
-    document.getElementById("result").style.display = "none";
+
+    const result = document.getElementById("result");
+    result.style.display = "none";
+    result.textContent = "";
+
+    document.getElementById("responseFrame").style.display = "block";
+    document.getElementById("responseFrame").src = "about:blank";
 
     try {
       await scanner.pause(true);
@@ -210,18 +221,30 @@
     document.getElementById("formPin").value = staffPin;
     document.getElementById("formId").value = id;
 
-    // אם לא מגיעה תשובה, מציגים הודעה במקום להיתקע ללא הסבר.
     clearTimeout(responseTimer);
+
     responseTimer = setTimeout(() => {
       if (waitingForResponse) {
-        setStatus("עדיין ממתינה לתשובת גוגל. אל תסרקי שוב בינתיים.");
+        setStatus(
+          "עדיין ממתינה לתשובת גוגל. בדקי אם התוצאה מופיעה במסגרת הכחולה."
+        );
       }
     }, 12000);
 
     document.getElementById("requestForm").submit();
   }
 
-  function scanNext() {
+  document.getElementById("responseFrame").addEventListener("load", function() {
+    if (!waitingForResponse || !busy) return;
+
+    clearTimeout(responseTimer);
+    waitingForResponse = false;
+
+    setStatus("התגובה נטענה במסגרת שמתחת לסורק.");
+    document.getElementById("nextButton").style.display = "inline-block";
+  });
+
+  async function scanNext() {
     clearTimeout(responseTimer);
     waitingForResponse = false;
     busy = false;
@@ -234,20 +257,12 @@
 
     if (scanner) {
       try {
-        scanner.resume();
-      } catch (e) {
+        await scanner.resume();
+      } catch (error) {
         setStatus("לא ניתן להמשיך בסריקה. רענני את הדף.");
       }
     }
   }
-
-  document.getElementById("responseFrame").addEventListener("load", function() {
-    if (!waitingForResponse || !busy) return;
-
-    clearTimeout(responseTimer);
-    setStatus("התקבלה תגובת שרת. אם התוצאה לא מופיעה, נבדוק את החיבור.");
-    document.getElementById("nextButton").style.display = "inline-block";
-  });
 
   async function stopScanner() {
     clearTimeout(responseTimer);
@@ -259,6 +274,7 @@
         await scanner.stop();
         scanner.clear();
       } catch (e) {}
+
       scanner = null;
     }
 
@@ -268,6 +284,7 @@
     document.getElementById("scannerArea").style.display = "none";
     document.getElementById("startButton").disabled = false;
     document.getElementById("responseFrame").src = "about:blank";
+    document.getElementById("nextButton").style.display = "none";
   }
 </script>
 </body>
