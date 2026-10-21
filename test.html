@@ -4,85 +4,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>בדיקת תקשורת לגוגל</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-    }
-    button {
-      font-size: 20px;
-      padding: 14px 22px;
-    }
-    #result {
-      margin-top: 25px;
-      font-size: 19px;
-      white-space: pre-wrap;
-    }
-  </style>
+  <title>בדיקת תשובת גוגל</title>
 </head>
-<body>
-  <h2>בדיקת תקשורת לגוגל</h2>
-  <p>הבדיקה אינה ניגשת לנתוני המשתתפות.</p>
-  <button id="testButton" onclick="testConnection()">
-    בדיקת תקשורת
-  </button>
-  <div id="result"></div>
+<body style="font-family:Arial;text-align:center;padding:25px">
+  <h2>בדיקת תשובת גוגל</h2>
+  <p>הבדיקה לא נוגעת בנתוני המשתתפות.</p>
 
-  <iframe
-    name="googleResponse"
-    id="googleFrame"
-    title="תשובת גוגל"
-    style="display:none">
-  </iframe>
-
-  <form
-    id="testForm"
-    method="POST"
-    target="_blank"
+  <form method="POST" target="_blank"
     action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
     <input type="hidden" name="action" value="connectionTest">
+    <button style="font-size:20px;padding:14px">
+      קבלת תשובת בדיקה מגוגל
+    </button>
   </form>
-
-  <script>
-    let waiting = false;
-
-    function testConnection() {
-      if (waiting) return;
-
-      waiting = true;
-      document.getElementById("testButton").disabled = true;
-      document.getElementById("result").textContent =
-        "ממתין לתשובה מגוגל...";
-
-      document.getElementById("testForm").submit();
-
-      setTimeout(() => {
-        if (waiting) {
-          document.getElementById("result").textContent =
-            "לא התקבלה תשובה בתוך 15 שניות. נבדוק את החיבור.";
-          waiting = false;
-          document.getElementById("testButton").disabled = false;
-        }
-      }, 15000);
-    }
-
-    window.addEventListener("message", event => {
-      if (!waiting) return;
-
-      if (
-        !event.data ||
-        event.data.source !== "mdq-google-test" ||
-        event.data.success !== true
-      ) return;
-
-      waiting = false;
-      document.getElementById("result").textContent =
-        "התקבלה תשובה מגוגל בהצלחה!\n" + event.data.message;
-
-      document.getElementById("testButton").disabled = false;
-    });
-  </script>
 </body>
 </html>
