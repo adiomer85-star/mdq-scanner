@@ -2,290 +2,366 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>סורק משתתפות</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>סורק משתתפות</title>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 16px;
-      background: #f7f8fb;
-    }
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 16px;
+  background: #f7f8fb;
+}
+input, button {
+  font-size: 19px;
+  padding: 13px;
+  margin: 8px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+input { max-width: 95%; }
+button {
+  background: #2455aa;
+  color: white;
+  border: 0;
+  cursor: pointer;
+}
+button:disabled { opacity: .5; }
 
-    input, button {
-      font-size: 19px;
-      padding: 13px;
-      margin: 8px;
-      border-radius: 10px;
-      box-sizing: border-box;
-    }
-
-    input { max-width: 95%; }
-
-    button {
-      background: #2455aa;
-      color: white;
-      border: 0;
-      cursor: pointer;
-    }
-
-    button:disabled { opacity: 0.5; }
-
-    #reader {
-      width: 100%;
-      max-width: 450px;
-      margin: 15px auto;
-      background: #eeeeee;
-      overflow: hidden;
-      border-radius: 12px;
-    }
-
-    #reader video {
-      display: block !important;
-      width: 100% !important;
-      height: auto !important;
-      object-fit: cover;
-    }
-
-    #status {
-      font-size: 18px;
-      white-space: pre-wrap;
-    }
-
-    #result {
-      display: none;
-      padding: 18px;
-      margin: 12px auto;
-      max-width: 450px;
-      border-radius: 12px;
-      font-size: 21px;
-      font-weight: bold;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    #responseFrame {
-      display: block;
-      width: 100%;
-      max-width: 450px;
-      height: 220px;
-      box-sizing: border-box;
-      border: 2px solid #2455aa;
-      margin: 12px auto;
-      background: white;
-      border-radius: 12px;
-    }
-
-    .success { background: #b8efb5; }
-    .error { background: #ffcccc; }
-  </style>
+#reader {
+  width: 100%;
+  max-width: 450px;
+  margin: 15px auto;
+  background: #eee;
+  overflow: hidden;
+  border-radius: 12px;
+}
+#reader video {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  object-fit: cover;
+}
+#status {
+  font-size: 18px;
+  white-space: pre-wrap;
+}
+#loginMessage {
+  font-size: 18px;
+  font-weight: bold;
+  color: #b00020;
+}
+#responseFrame {
+  display: none;
+  width: 100%;
+  max-width: 450px;
+  height: 220px;
+  box-sizing: border-box;
+  border: 2px solid #2455aa;
+  margin: 12px auto;
+  background: white;
+  border-radius: 12px;
+}
+</style>
 </head>
 
 <body>
-  <h2>סורק משתתפות</h2>
 
-  <section id="login">
-    <p>הזיני קוד צוות</p>
-    <input id="pin" type="password"
-           placeholder="קוד צוות"
-           autocomplete="current-password">
-    <br>
-    <button id="startButton" onclick="startScanner()">
-      כניסה והפעלת מצלמה
-    </button>
-  </section>
+<h2>סורק משתתפות</h2>
 
-  <section id="scannerArea" style="display:none">
-    <p id="status">מכינה מצלמה...</p>
-    <div id="reader"></div>
-    <div id="result"></div>
+<section id="login">
+  <p>הזיני קוד צוות</p>
+  <input id="pin" type="password"
+         placeholder="קוד צוות"
+         autocomplete="current-password">
+  <br>
+  <button id="startButton" onclick="authenticateStaff()">
+    כניסה והפעלת מצלמה
+  </button>
+  <p id="loginMessage"></p>
+</section>
 
-    <button id="nextButton"
-            style="display:none"
-            onclick="scanNext()">
-      סריקת המשתתפת הבאה
-    </button>
+<section id="scannerArea" style="display:none">
+  <p id="status">מכינה מצלמה...</p>
+  <div id="reader"></div>
 
-    <button onclick="stopScanner()">יציאה</button>
-  </section>
+  <iframe id="responseFrame"
+          name="responseFrame"
+          title="תוצאת בדיקת המשתתפת"></iframe>
 
-  <iframe
-    id="responseFrame"
-    name="responseFrame"
-    title="תוצאת בדיקת המשתתפת">
-  </iframe>
+  <button id="nextButton"
+          style="display:none"
+          onclick="scanNext()">
+    סריקת המשתתפת הבאה
+  </button>
 
-  <form
-    id="requestForm"
-    method="POST"
-    target="responseFrame"
-    action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
+  <button onclick="stopScanner()">יציאה</button>
+</section>
 
-    <input type="hidden" name="action" value="redeem">
-    <input type="hidden" name="pin" id="formPin">
-    <input type="hidden" name="id" id="formId">
-  </form>
+<iframe id="authFrame"
+        name="authFrame"
+        style="display:none"
+        title="אימות קוד צוות"></iframe>
+
+<form id="authForm" method="POST" target="authFrame"
+      action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
+  <input type="hidden" name="action" value="authenticate">
+  <input type="hidden" name="pin" id="authPin">
+  <input type="hidden" name="nonce" id="authNonce">
+</form>
+
+<form id="requestForm" method="POST" target="responseFrame"
+      action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
+  <input type="hidden" name="action" value="redeem">
+  <input type="hidden" name="pin" id="formPin">
+  <input type="hidden" name="id" id="formId">
+  <input type="hidden" name="nonce" id="redeemNonce">
+</form>
 
 <script>
-  let scanner = null;
-  let busy = false;
-  let staffPin = "";
-  let waitingForResponse = false;
-  let responseTimer = null;
+let scanner = null;
+let busy = false;
+let staffPin = "";
+let waitingForResponse = false;
+let authPending = false;
+let currentAuthNonce = "";
+let currentRedeemNonce = "";
+let authTimer = null;
+let responseTimer = null;
 
-  function setStatus(message) {
-    document.getElementById("status").textContent = message;
+function el(id) {
+  return document.getElementById(id);
+}
+
+function setStatus(message) {
+  el("status").textContent = message;
+}
+
+function makeNonce() {
+  return crypto.randomUUID();
+}
+
+function resetLogin(message) {
+  authPending = false;
+  clearTimeout(authTimer);
+  el("startButton").disabled = false;
+  el("loginMessage").textContent = message || "";
+}
+
+function authenticateStaff() {
+  if (authPending) return;
+
+  staffPin = el("pin").value.trim();
+
+  if (!staffPin) {
+    el("loginMessage").textContent = "יש להזין קוד צוות";
+    return;
   }
 
-  async function startScanner() {
-    staffPin = document.getElementById("pin").value.trim();
+  authPending = true;
+  el("startButton").disabled = true;
+  el("loginMessage").textContent = "בודקת קוד צוות...";
 
-    if (!staffPin) {
-      alert("הזיני קוד צוות");
-      return;
+  currentAuthNonce = makeNonce();
+  el("authPin").value = staffPin;
+  el("authNonce").value = currentAuthNonce;
+
+  authTimer = setTimeout(function() {
+    if (authPending) {
+      resetLogin("לא התקבל אישור מגוגל. נסי שוב.");
     }
+  }, 15000);
 
-    document.getElementById("startButton").disabled = true;
-    document.getElementById("login").style.display = "none";
-    document.getElementById("scannerArea").style.display = "block";
+  el("authForm").submit();
+}
 
-    setStatus("פותחת מצלמה...");
+window.addEventListener("message", function(event) {
+  const data = event.data;
 
-    try {
-      if (typeof Html5Qrcode === "undefined") {
-        throw new Error("ספריית הסריקה לא נטענה. בדקי את החיבור לאינטרנט.");
-      }
+  if (!data || data.type !== "MDQ_RESPONSE") return;
 
-      scanner = new Html5Qrcode("reader", { verbose: false });
+  // תוצאות מתקבלות רק מהמסגרת של שירות גוגל.
+  const googleOrigin =
+    event.origin === "https://script.google.com" ||
+    event.origin.endsWith(".googleusercontent.com") ||
+    event.origin === "null";
 
-      await scanner.start(
-        { facingMode: "environment" },
-        {
-          fps: 12,
-          qrbox: function(width, height) {
-            const size = Math.floor(Math.min(width, height) * 0.75);
-            return { width: size, height: size };
-          },
-          disableFlip: true
-        },
-        onScanSuccess,
-        function() {}
+  if (!googleOrigin) return;
+
+  if (data.action === "authenticate") {
+    if (!authPending || data.nonce !== currentAuthNonce) return;
+
+    clearTimeout(authTimer);
+    authPending = false;
+
+    if (data.status === "AUTHORIZED") {
+      el("loginMessage").textContent = "";
+      el("login").style.display = "none";
+      el("scannerArea").style.display = "block";
+      startScanner();
+    } else {
+      resetLogin(
+        data.status === "UNAUTHORIZED"
+          ? "קוד צוות שגוי"
+          : "שגיאה באימות. נסי שוב."
       );
-
-      setStatus("המצלמה פעילה. כווני לקוד QR.");
-
-    } catch (error) {
-      setStatus("לא ניתן לפתוח מצלמה: " + (error.message || error));
-      document.getElementById("login").style.display = "block";
-      document.getElementById("scannerArea").style.display = "none";
-      document.getElementById("startButton").disabled = false;
     }
   }
 
-  async function onScanSuccess(decodedText) {
-    if (busy) return;
+  if (data.action === "redeem") {
+    if (!busy || !waitingForResponse ||
+        data.nonce !== currentRedeemNonce) return;
 
-    let id = decodedText.trim();
+    clearTimeout(responseTimer);
+    waitingForResponse = false;
 
+    if (data.status === "UNAUTHORIZED") {
+      setStatus("קוד צוות שגוי. יש לצאת ולהיכנס מחדש.");
+    } else {
+      setStatus("תוצאת הבדיקה מופיעה במסגרת.");
+    }
+
+    el("nextButton").style.display = "inline-block";
+  }
+});
+
+async function startScanner() {
+  setStatus("פותחת מצלמה...");
+
+  try {
+    if (typeof Html5Qrcode === "undefined") {
+      throw new Error("ספריית הסריקה לא נטענה");
+    }
+
+    scanner = new Html5Qrcode("reader", { verbose: false });
+
+    await scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 12,
+        qrbox: function(width, height) {
+          const size = Math.floor(Math.min(width, height) * .75);
+          return { width: size, height: size };
+        },
+        disableFlip: true
+      },
+      onScanSuccess,
+      function() {}
+    );
+
+    setStatus("המצלמה פעילה. כווני לקוד QR.");
+
+  } catch (error) {
+    setStatus("לא ניתן לפתוח מצלמה: " + (error.message || error));
+    el("login").style.display = "block";
+    el("scannerArea").style.display = "none";
+    resetLogin("");
+  }
+}
+
+async function onScanSuccess(decodedText) {
+  if (busy) return;
+
+  let id = decodedText.trim();
+
+  try {
+    const parsed = new URL(id);
+    if (parsed.protocol === "http:" ||
+        parsed.protocol === "https:") {
+      id = parsed.searchParams.get("id") || id;
+    }
+  } catch (e) {}
+
+  if (!id) return;
+
+  busy = true;
+  waitingForResponse = true;
+
+  setStatus("הקוד זוהה. בודקת משתתפת...");
+  el("nextButton").style.display = "none";
+  el("responseFrame").style.display = "block";
+
+  try {
+    await scanner.pause(true);
+  } catch (e) {}
+
+  currentRedeemNonce = makeNonce();
+
+  el("formPin").value = staffPin;
+  el("formId").value = id;
+  el("redeemNonce").value = currentRedeemNonce;
+
+  clearTimeout(responseTimer);
+
+  responseTimer = setTimeout(function() {
+    if (waitingForResponse) {
+      waitingForResponse = false;
+      setStatus(
+        "לא התקבלה תשובה מלאה מגוגל. בדקי את המסגרת לפני סריקה נוספת."
+      );
+      el("nextButton").style.display = "inline-block";
+    }
+  }, 15000);
+
+  el("requestForm").submit();
+}
+
+function scanNext() {
+  clearTimeout(responseTimer);
+  waitingForResponse = false;
+  busy = false;
+  currentRedeemNonce = "";
+
+  el("responseFrame").style.display = "none";
+  el("responseFrame").src = "about:blank";
+  el("nextButton").style.display = "none";
+
+  setStatus("כווני את המצלמה לקוד הבא.");
+
+  if (scanner) {
     try {
-      const parsed = new URL(id);
-      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-        id = parsed.searchParams.get("id") || id;
-      }
-    } catch (e) {}
+      scanner.resume();
+    } catch (e) {
+      setStatus("לא ניתן להמשיך בסריקה. רענני את הדף.");
+    }
+  }
+}
 
-    if (!id) return;
+async function stopScanner() {
+  clearTimeout(responseTimer);
+  clearTimeout(authTimer);
 
-    busy = true;
-    waitingForResponse = true;
+  waitingForResponse = false;
+  authPending = false;
+  busy = true;
 
-    setStatus("הקוד זוהה. בודקת משתתפת...");
-    document.getElementById("nextButton").style.display = "none";
-
-    const result = document.getElementById("result");
-    result.style.display = "none";
-    result.textContent = "";
-
-    document.getElementById("responseFrame").style.display = "block";
-    document.getElementById("responseFrame").src = "about:blank";
-
+  if (scanner) {
     try {
-      await scanner.pause(true);
+      await scanner.stop();
+      scanner.clear();
     } catch (e) {}
-
-    document.getElementById("formPin").value = staffPin;
-    document.getElementById("formId").value = id;
-
-    clearTimeout(responseTimer);
-
-    responseTimer = setTimeout(() => {
-      if (waitingForResponse) {
-        setStatus(
-          "עדיין ממתינה לתשובת גוגל. בדקי אם התוצאה מופיעה במסגרת הכחולה."
-        );
-      }
-    }, 12000);
-
-    document.getElementById("requestForm").submit();
+    scanner = null;
   }
 
-  document.getElementById("responseFrame").addEventListener("load", function() {
-    if (!waitingForResponse || !busy) return;
+  staffPin = "";
+  currentAuthNonce = "";
+  currentRedeemNonce = "";
 
-    clearTimeout(responseTimer);
-    waitingForResponse = false;
-
-    setStatus("התגובה נטענה במסגרת שמתחת לסורק.");
-    document.getElementById("nextButton").style.display = "inline-block";
-  });
-
-  async function scanNext() {
-    clearTimeout(responseTimer);
-    waitingForResponse = false;
-    busy = false;
-
-    document.getElementById("responseFrame").src = "about:blank";
-    document.getElementById("result").style.display = "none";
-    document.getElementById("nextButton").style.display = "none";
-
-    setStatus("כווני את המצלמה לקוד הבא.");
-
-    if (scanner) {
-      try {
-        await scanner.resume();
-      } catch (error) {
-        setStatus("לא ניתן להמשיך בסריקה. רענני את הדף.");
-      }
-    }
-  }
-
-  async function stopScanner() {
-    clearTimeout(responseTimer);
-    waitingForResponse = false;
-    busy = true;
-
-    if (scanner) {
-      try {
-        await scanner.stop();
-        scanner.clear();
-      } catch (e) {}
-
-      scanner = null;
-    }
-
-    staffPin = "";
-    document.getElementById("pin").value = "";
-    document.getElementById("login").style.display = "block";
-    document.getElementById("scannerArea").style.display = "none";
-    document.getElementById("startButton").disabled = false;
-    document.getElementById("responseFrame").src = "about:blank";
-    document.getElementById("nextButton").style.display = "none";
-  }
+  el("pin").value = "";
+  el("loginMessage").textContent = "";
+  el("login").style.display = "block";
+  el("scannerArea").style.display = "none";
+  el("startButton").disabled = false;
+  el("responseFrame").style.display = "none";
+  el("responseFrame").src = "about:blank";
+  el("nextButton").style.display = "none";
+  busy = false;
+}
 </script>
+
 </body>
 </html>
