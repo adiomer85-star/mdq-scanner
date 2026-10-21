@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>בדיקת חיבור לגוגל</title>
+  <title>בדיקת תקשורת לגוגל</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,49 +13,76 @@
     }
     button {
       font-size: 20px;
-      padding: 15px;
+      padding: 14px 22px;
     }
     #result {
       margin-top: 25px;
-      font-size: 18px;
+      font-size: 19px;
       white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h2>בדיקת חיבור לגוגל</h2>
-  <button onclick="testConnection()">בדיקת חיבור</button>
+  <h2>בדיקת תקשורת לגוגל</h2>
+  <p>הבדיקה אינה ניגשת לנתוני המשתתפות.</p>
+  <button id="testButton" onclick="testConnection()">
+    בדיקת תקשורת
+  </button>
   <div id="result"></div>
 
+  <iframe
+    name="googleResponse"
+    id="googleFrame"
+    title="תשובת גוגל"
+    style="display:none">
+  </iframe>
+
+  <form
+    id="testForm"
+    method="POST"
+    target="googleResponse"
+    action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
+    <input type="hidden" name="action" value="connectionTest">
+  </form>
+
   <script>
-    const GOOGLE_URL =
-      "https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec";
+    let waiting = false;
 
-    async function testConnection() {
-      const result = document.getElementById("result");
-      result.textContent = "שולח בקשה לגוגל...";
+    function testConnection() {
+      if (waiting) return;
 
-      try {
-        await fetch(GOOGLE_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: {
-            "Content-Type": "text/plain"
-          },
-          body: JSON.stringify({
-            action: "connectionTest"
-          })
-        });
+      waiting = true;
+      document.getElementById("testButton").disabled = true;
+      document.getElementById("result").textContent =
+        "ממתין לתשובה מגוגל...";
 
-        result.textContent =
-          "הדפדפן שלח את הבקשה ללא שגיאת רשת גלויה.\n" +
-          "עדיין צריך לבדוק בגוגל אם היא התקבלה.";
+      document.getElementById("testForm").submit();
 
-      } catch (error) {
-        result.textContent =
-          "שגיאה בשליחת הבקשה: " + error.message;
-      }
+      setTimeout(() => {
+        if (waiting) {
+          document.getElementById("result").textContent =
+            "לא התקבלה תשובה בתוך 15 שניות. נבדוק את החיבור.";
+          waiting = false;
+          document.getElementById("testButton").disabled = false;
+        }
+      }, 15000);
     }
+
+    window.addEventListener("message", event => {
+      if (!waiting) return;
+
+      if (
+        !event.data ||
+        event.data.source !== "mdq-google-test" ||
+        event.data.success !== true
+      ) return;
+
+      waiting = false;
+      document.getElementById("result").textContent =
+        "התקבלה תשובה מגוגל בהצלחה!\n" + event.data.message;
+
+      document.getElementById("testButton").disabled = false;
+    });
   </script>
 </body>
 </html>
