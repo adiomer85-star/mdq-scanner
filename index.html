@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>סורק משתתפות</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 18px;
+      background: #f7f8fb;
+    }
+    h2 { margin-bottom: 12px; }
+    #reader {
+      width: 100%;
+      max-width: 450px;
+      margin: 15px auto;
+      background: white;
+    }
+    button {
+      font-size: 19px;
+      padding: 13px 22px;
+      border: 0;
+      border-radius: 10px;
+      background: #2455aa;
+      color: white;
+      margin: 8px;
+    }
+    #result {
+      padding: 20px;
+      margin: 15px auto;
+      border-radius: 12px;
+      font-size: 20px;
+      overflow-wrap: anywhere;
+      max-width: 450px;
+    }
+    .success { background: #b8efb5; }
+    .error { background: #ffcccc; }
+  </style>
+</head>
+<body>
+  <h2>סורק משתתפות</h2>
+  <p id="status">לחצי להפעלת המצלמה</p>
+  <button id="startButton" onclick="startScanner()">הפעלת מצלמה</button>
+  <div id="reader"></div>
+  <div id="result"></div>
+  <button id="nextButton" style="display:none" onclick="scanNext()">
+    סריקת המשתתפת הבאה
+  </button>
+
+  <script>
+    let scanner = null;
+    let busy = false;
+
+    function showResult(message, success) {
+      const element = document.getElementById("result");
+      element.textContent = message;
+      element.className = success ? "success" : "error";
+    }
+
+    async function startScanner() {
+      document.getElementById("startButton").disabled = true;
+      document.getElementById("status").textContent = "פותח מצלמה...";
+
+      try {
+        if (typeof Html5Qrcode === "undefined") {
+          throw new Error("ספריית הסריקה לא נטענה");
+        }
+
+        scanner = new Html5Qrcode("reader", {
+          verbose: false
+        });
+
+        await scanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 15,
+            qrbox: function(width, height) {
+              const size = Math.floor(Math.min(width, height) * 0.75);
+              return { width: size, height: size };
+            },
+            disableFlip: true
+          },
+          onScanSuccess,
+          function() {}
+        );
+
+        document.getElementById("status").textContent =
+          "כווני את המצלמה לקוד QR";
+        document.getElementById("startButton").style.display = "none";
+
+      } catch (error) {
+        document.getElementById("status").textContent =
+          "לא ניתן לפתוח מצלמה: " + (error.message || error);
+        document.getElementById("startButton").disabled = false;
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      if (busy) return;
+      busy = true;
+
+      if (navigator.vibrate) navigator.vibrate(150);
+
+      document.getElementById("status").textContent = "הקוד זוהה!";
+      showResult("זוהה קוד:\n" + decodedText, true);
+      document.getElementById("nextButton").style.display = "inline-block";
+
+      if (scanner) {
+        try { scanner.pause(true); } catch (e) {}
+      }
+    }
+
+    function scanNext() {
+      document.getElementById("result").textContent = "";
+      document.getElementById("result").className = "";
+      document.getElementById("nextButton").style.display = "none";
+      document.getElementById("status").textContent =
+        "כווני את המצלמה לקוד הבא";
+
+      if (scanner) {
+        try { scanner.resume(); } catch (e) {}
+      }
+      busy = false;
+    }
+  </script>
+</body>
+</html>
