@@ -3,7 +3,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>סורק משתתפות</title>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -19,108 +19,121 @@
 
     input, button {
       font-size: 19px;
-      padding: 12px;
-      margin: 7px;
-      border-radius: 9px;
+      padding: 13px;
+      margin: 8px;
+      border-radius: 10px;
       box-sizing: border-box;
     }
 
-    input {
-      max-width: 90%;
-    }
+    input { max-width: 95%; }
 
     button {
-      border: 0;
       background: #2455aa;
       color: white;
-      cursor: pointer;
+      border: 0;
     }
 
-    button:disabled {
-      opacity: 0.5;
-    }
+    button:disabled { opacity: 0.5; }
 
     #reader {
       width: 100%;
       max-width: 450px;
-      margin: 12px auto;
-      background: white;
+      min-height: 100px;
+      margin: 15px auto;
+      background: #eeeeee;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+
+    #reader video {
+      display: block !important;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 200px;
+      object-fit: cover;
     }
 
     #status {
-      font-size: 18px;
+      font-size: 19px;
       white-space: pre-wrap;
     }
 
+    #result {
+      display: none;
+      padding: 22px;
+      margin: 15px auto;
+      max-width: 450px;
+      border-radius: 12px;
+      font-size: 23px;
+      font-weight: bold;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
     #responseFrame {
+      display: none;
       width: 100%;
       max-width: 450px;
-      height: 180px;
+      height: 170px;
       border: 0;
-      margin: 12px auto;
       background: white;
-      border-radius: 12px;
     }
+
+    .success { background: #b8efb5; }
+    .error { background: #ffcccc; }
   </style>
 </head>
 
 <body>
   <h2>סורק משתתפות</h2>
 
-  <div id="login">
+  <section id="login">
     <p>הזיני קוד צוות</p>
-    <input
-      id="pin"
-      type="password"
-      placeholder="קוד צוות"
-      autocomplete="current-password"
-    >
+    <input id="pin" type="password" placeholder="קוד צוות"
+           autocomplete="current-password">
     <br>
-    <button id="loginButton" onclick="startScanner()">
+    <button id="startButton" onclick="startScanner()">
       כניסה והפעלת מצלמה
     </button>
-  </div>
+  </section>
 
-  <div id="scannerArea" style="display:none">
-    <p id="status">ממתין להפעלת המצלמה...</p>
+  <section id="scannerArea" style="display:none">
+    <p id="status">מכינה מצלמה...</p>
     <div id="reader"></div>
+    <div id="result"></div>
 
-    <button
-      id="nextButton"
-      style="display:none"
-      onclick="scanNext()"
-    >
-      סריקת המשתתפת הבאה
-    </button>
+    <button id="nextButton" style="display:none"
+            onclick="scanNext()">סריקת המשתתפת הבאה</button>
 
     <button onclick="stopScanner()">יציאה</button>
-  </div>
+  </section>
 
-  <iframe
-    id="responseFrame"
-    name="responseFrame"
-    title="תוצאת בדיקת המשתתפת"
-  ></iframe>
+  <iframe id="responseFrame" name="responseFrame"
+          title="תוצאת בדיקה"></iframe>
 
-  <form
-    id="requestForm"
-    method="POST"
-    target="responseFrame"
-    action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec"
-  >
+  <form id="requestForm" method="POST" target="responseFrame"
+        action="https://script.google.com/macros/s/AKfycbxrpudd3OLhboj3qDZXb6_8T04RUE00ORnxVhMPqwnpOlLM0lUY_U1iJVXVafb8qm-gAg/exec">
     <input type="hidden" name="action" value="redeem">
-    <input type="hidden" id="formPin" name="pin">
-    <input type="hidden" id="formId" name="id">
+    <input type="hidden" name="pin" id="formPin">
+    <input type="hidden" name="id" id="formId">
   </form>
 
 <script>
   let scanner = null;
   let busy = false;
   let staffPin = "";
-  let requestStarted = false;
+  let waitingForResponse = false;
+  let responseTimer = null;
 
-  function showStatus(message) {
+  function setStatus(message) {
     document.getElementById("status").textContent = message;
+  }
+
+  function showResult(message, success) {
+    const el = document.getElementById("result");
+    el.textContent = message;
+    el.className = success ? "success" : "error";
+    el.style.display = "block";
   }
 
   async function startScanner() {
@@ -131,10 +144,10 @@
       return;
     }
 
-    document.getElementById("loginButton").disabled = true;
+    document.getElementById("startButton").disabled = true;
     document.getElementById("login").style.display = "none";
     document.getElementById("scannerArea").style.display = "block";
-    showStatus("פותח מצלמה...");
+    setStatus("פותחת מצלמה...");
 
     try {
       if (typeof Html5Qrcode === "undefined") {
@@ -157,74 +170,86 @@
         function() {}
       );
 
-      showStatus("המצלמה פעילה. כווני לקוד QR.");
+      setStatus("המצלמה פעילה. כווני לקוד QR.");
 
     } catch (error) {
-      showStatus("לא ניתן לפתוח מצלמה: " + (error.message || error));
-
+      setStatus("לא ניתן לפתוח מצלמה: " + (error.message || error));
       document.getElementById("login").style.display = "block";
       document.getElementById("scannerArea").style.display = "none";
-      document.getElementById("loginButton").disabled = false;
+      document.getElementById("startButton").disabled = false;
     }
   }
 
   async function onScanSuccess(decodedText) {
     if (busy) return;
 
-    let participantID = decodedText.trim();
+    let id = decodedText.trim();
 
-    // תומך גם ב-QR המכיל מזהה וגם ב-QR המכיל כתובת עם פרמטר id
     try {
-      const parsed = new URL(participantID);
-
-      if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-        participantID = parsed.searchParams.get("id") || participantID;
+      const parsed = new URL(id);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        id = parsed.searchParams.get("id") || id;
       }
-    } catch (e) {
-      // הטקסט אינו כתובת, ולכן מתייחסים אליו כמזהה
-    }
+    } catch (e) {}
 
-    if (!participantID) {
-      showStatus("לא נמצא מזהה בקוד");
-      return;
-    }
+    if (!id) return;
 
     busy = true;
-    requestStarted = true;
+    waitingForResponse = true;
 
-    showStatus("בודקת משתתפת...");
-
+    setStatus("בודקת משתתפת...");
     document.getElementById("nextButton").style.display = "none";
+    document.getElementById("result").style.display = "none";
 
     try {
       await scanner.pause(true);
     } catch (e) {}
 
     document.getElementById("formPin").value = staffPin;
-    document.getElementById("formId").value = participantID;
+    document.getElementById("formId").value = id;
+
+    // אם לא מגיעה תשובה, מציגים הודעה במקום להיתקע ללא הסבר.
+    clearTimeout(responseTimer);
+    responseTimer = setTimeout(() => {
+      if (waitingForResponse) {
+        setStatus("עדיין ממתינה לתשובת גוגל. אל תסרקי שוב בינתיים.");
+      }
+    }, 12000);
 
     document.getElementById("requestForm").submit();
   }
 
-  async function scanNext() {
-    if (!scanner) return;
-
+  function scanNext() {
+    clearTimeout(responseTimer);
+    waitingForResponse = false;
     busy = false;
-    requestStarted = false;
 
     document.getElementById("responseFrame").src = "about:blank";
+    document.getElementById("result").style.display = "none";
     document.getElementById("nextButton").style.display = "none";
 
-    showStatus("כווני את המצלמה לקוד הבא.");
+    setStatus("כווני את המצלמה לקוד הבא.");
 
-    try {
-      await scanner.resume();
-    } catch (error) {
-      showStatus("לא ניתן להמשיך בסריקה. נסי לרענן את הדף.");
+    if (scanner) {
+      try {
+        scanner.resume();
+      } catch (e) {
+        setStatus("לא ניתן להמשיך בסריקה. רענני את הדף.");
+      }
     }
   }
 
+  document.getElementById("responseFrame").addEventListener("load", function() {
+    if (!waitingForResponse || !busy) return;
+
+    clearTimeout(responseTimer);
+    setStatus("התקבלה תגובת שרת. אם התוצאה לא מופיעה, נבדוק את החיבור.");
+    document.getElementById("nextButton").style.display = "inline-block";
+  });
+
   async function stopScanner() {
+    clearTimeout(responseTimer);
+    waitingForResponse = false;
     busy = true;
 
     if (scanner) {
@@ -232,29 +257,16 @@
         await scanner.stop();
         scanner.clear();
       } catch (e) {}
-
       scanner = null;
     }
 
     staffPin = "";
-    requestStarted = false;
-
     document.getElementById("pin").value = "";
     document.getElementById("login").style.display = "block";
     document.getElementById("scannerArea").style.display = "none";
-    document.getElementById("loginButton").disabled = false;
+    document.getElementById("startButton").disabled = false;
     document.getElementById("responseFrame").src = "about:blank";
-
-    showStatus("");
   }
-
-  document.getElementById("responseFrame").addEventListener("load", function() {
-    if (!requestStarted || !busy) return;
-
-    showStatus("התקבלה תגובה מהשרת. בדקי את התוצאה במסגרת שמתחת לסורק.");
-    document.getElementById("nextButton").style.display = "inline-block";
-  });
 </script>
-
 </body>
 </html>
